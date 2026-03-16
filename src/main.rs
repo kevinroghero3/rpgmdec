@@ -88,7 +88,7 @@ const LOGO_256PX: &[u8] = include_bytes!("../icons/256px.rgba");
 
 struct AudioPlayer {
     stream: Option<cpal::Stream>,
-    state: Arc<AtomicU8>,
+    playback_state: Arc<AtomicU8>,
     seek_pos: Arc<AtomicU64>,
     duration: Time,
     duration_string: Arc<String>,
@@ -96,7 +96,7 @@ struct AudioPlayer {
 
 impl AudioPlayer {
     fn stop(&mut self) {
-        self.state.store(2, Ordering::Release);
+        self.playback_state.store(2, Ordering::Release);
         self.stream.take();
     }
 }
@@ -270,6 +270,8 @@ struct Application {
     window: Window,
     trackpos_sender: Sender<u64>,
     trackpos_receiver: Receiver<u64>,
+    trackend_sender: Sender<bool>,
+    trackend_receiver: Receiver<bool>,
 
     menu_bar: MenuBar,
 
@@ -398,6 +400,7 @@ impl Application {
         ColorTheme::new(BLACK_THEME).apply();
 
         let (trackpos_sender, trackpos_receiver) = app::channel();
+        let (trackend_sender, trackend_receiver) = app::channel();
 
         let mut window = Window::default()
             .with_size(WINDOW_WIDTH, WINDOW_HEIGHT)
@@ -497,6 +500,8 @@ impl Application {
             window,
             trackpos_sender,
             trackpos_receiver,
+            trackend_sender,
+            trackend_receiver,
             menu_bar,
             select_output_dir_button,
             output_dir_input,
@@ -1628,6 +1633,7 @@ impl Application {
         match event {
             Event::DndEnter | Event::DndDrag | Event::DndRelease => true,
             Event::Paste => {
+                println!("paste");
                 let paths = app::event_text();
                 self.parse_files(&paths);
                 true
@@ -1857,16 +1863,16 @@ impl Application {
 
     fn play_button_cb(&mut self, _: &mut Button) {
         if let Some(player) = &mut self.audio_player {
-            let state = player.state.load(Ordering::Acquire);
+            let state = player.playback_state.load(Ordering::Acquire);
 
             if state == 2 {
                 player.stop();
             } else if state == 1 {
-                player.state.store(0, Ordering::Release);
+                player.playback_state.store(0, Ordering::Release);
                 return;
             }
 
-            player.state.store(0, Ordering::Release);
+            player.playback_state.store(0, Ordering::Release);
         }
 
         let index = self.file_list.value() as usize - 1;
@@ -1943,7 +1949,7 @@ impl Application {
         let config = output_device.default_output_config().unwrap().config();
         let channels = config.channels as usize;
 
-        let state = Arc::new(AtomicU8::new(0));
+        let playback_state = Arc::new(AtomicU8::new(0));
         let seek_pos = Arc::new(AtomicU64::new(u64::MAX));
         let last_playback_second = Arc::new(AtomicU64::new(0));
 
@@ -1953,13 +1959,20 @@ impl Application {
         let stream = match output_device.build_output_stream(
             &config,
             {
-                let state = state.clone();
+                let state = playback_state.clone();
                 let seek_pos = seek_pos.clone();
-                let sender = self.trackpos_sender;
+                let trackpos_sender = self.trackpos_sender;
+                let trackend_sender = self.trackend_sender;
 
                 move |data, _| {
-                    if state.load(Ordering::Acquire) == 1 {
+                    let state_value = state.load(Ordering::Acquire);
+
+                    if state_value == 1 {
                         data.fill(0f32);
+                        return;
+                    } else if state_value == 2 {
+                        data.fill(0f32);
+                        trackend_sender.send(true);
                         return;
                     }
 
@@ -1986,7 +1999,8 @@ impl Application {
                                 Ok(packet) => packet,
                                 Err(err) => {
                                     println!("Packets ended: {err}.");
-                                    break;
+                                    trackend_sender.send(true);
+                                    return;
                                 }
                             };
 
@@ -2017,7 +2031,7 @@ impl Application {
                             if pos.seconds
                                 != last_playback_second.load(Ordering::Acquire)
                             {
-                                sender.send(pos.seconds);
+                                trackpos_sender.send(pos.seconds);
                                 last_playback_second
                                     .store(pos.seconds, Ordering::Release);
                             }
@@ -2070,7 +2084,7 @@ impl Application {
 
         self.audio_player = Some(AudioPlayer {
             stream: Some(stream),
-            state,
+            playback_state,
             seek_pos,
             duration,
             duration_string: Arc::new(format!(
@@ -2085,7 +2099,7 @@ impl Application {
 
     fn pause_button_cb(&mut self, _: &mut Button) {
         if let Some(player) = &self.audio_player {
-            player.state.store(1, Ordering::Release);
+            player.playback_state.store(1, Ordering::Release);
         }
     }
 
@@ -2296,6 +2310,13 @@ impl Application {
                     .set_range(0f64, audio_player.duration.seconds as f64);
                 self.progress_slider.set_value(playback_second as f64);
             }
+        }
+
+        if let Some(track_end) = self.trackend_receiver.recv()
+            && track_end
+        {
+            let audio_player = self.audio_player.as_mut().unwrap();
+            audio_player.stop();
         }
     }
 }
