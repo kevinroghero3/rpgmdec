@@ -902,8 +902,11 @@ impl Application {
                 let index = item as usize - 1;
                 let entry = &decrypted_archive_entries[index];
 
-                let output_path = decrypted_dir.join(relative_path)
-                    .with_extension(file_type.to_string());
+                let output_path = decrypted_dir.join(
+                    String::from_utf8_lossy(entry.path.as_ref()).into_owned(),
+                );
+
+                println!("DEBUG: Tento di scrivere in: {:?}", output_path);
 
                 let parent_dir = output_path.parent().unwrap();
 
@@ -980,8 +983,10 @@ impl Application {
                     }
                 }
 
-                let output_path = Path::new(decrypted_dir.as_ref())
-                    .join(relative_path.with_extension(file_type.to_string()));
+                let output_path = decrypted_dir.join(relative_path)
+                    .with_extension(file_type.to_string());
+
+                println!("DEBUG: Tento di scrivere in: {:?}", output_path);
 
                 let parent_dir = output_path.parent().unwrap();
 
