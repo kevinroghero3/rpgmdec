@@ -2,13 +2,12 @@ name: Rust Compilation
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
 
 env:
   CARGO_TERM_COLOR: always
-  # Forza l'uso di Node.js 24 per tutte le action nel workflow
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
@@ -17,7 +16,24 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4 # Controlla se esiste v5 o superiore nel frattempo!
+      uses: actions/checkout@v4
+
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libasound2-dev \
+          libx11-dev \
+          libxext-dev \
+          libxft-dev \
+          libxinerama-dev \
+          libxcursor-dev \
+          libxrender-dev \
+          libxfixes-dev \
+          libpango1.0-dev \
+          libcairo2-dev \
+          libgl1-mesa-dev \
+          pkg-config
 
     - name: Install Rust Toolchain
       uses: dtolnay/rust-toolchain@stable
