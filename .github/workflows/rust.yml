@@ -9,24 +9,32 @@ on:
     branches: [ "master" ]
 
 jobs:
-  release:
-    name: Rilascia per Windows
-    runs-on: windows-latest
+  build:
+    runs-on: windows-2022
+
     steps:
-      - name: Checkout del codice
-        uses: actions/checkout@v4
+    - name: Checkout del codice
+      uses: actions/checkout@v4
 
-      - name: Imposta Rust
-        run: rustup update
+    - name: Imposta Rust con toolchain GNU
+      run: |
+        rustup update
+        rustup target add x86_64-pc-windows-gnu
 
-      - name: Compila
-        run: cargo build --release
+    - name: Installa MSYS2 (necessario per GNU)
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        install: mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja
 
-      - name: Carica nella Release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: target/release/*.exe
-          tag: ${{ github.ref }}
-          overwrite: true
-          file_glob: true
+    - name: Compila con target GNU
+      run: cargo build --release --target x86_64-pc-windows-gnu
+      env:
+        CC: "gcc"
+        CXX: "g++"
+
+    - name: Carica l'eseguibile come Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: mio-programma-windows-gnu
+        path: target/x86_64-pc-windows-gnu/release/*.exe
