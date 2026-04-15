@@ -821,15 +821,15 @@ impl Application {
                 date.hour(),
                 date.minute(),
                 date.second()
-            )).replace("/", "\\");
+            ));
 
             if matches!(
                 mut_self.state,
                 State::DecryptArchive | State::DecryptAsset
             ) {
-                mut_self.decrypt_cb(this, &output_dir);
+                mut_self.decrypt_cb(this, &output_dir.replacen("/", "\\", 1));
             } else {
-                mut_self.encrypt_cb(this, &output_dir);
+                mut_self.encrypt_cb(this, &output_dir.replacen("/", "\\", 1));
             }
         });
 
