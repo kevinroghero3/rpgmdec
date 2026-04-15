@@ -906,8 +906,6 @@ impl Application {
                     String::from_utf8_lossy(entry.path.as_ref()).into_owned(),
                 );
 
-                println!("DEBUG: Tento di scrivere in: {:?}", output_path);
-
                 let parent_dir = output_path.parent().unwrap();
 
                 if let Err(err) = create_dir_all(parent_dir) {
@@ -985,8 +983,6 @@ impl Application {
 
                 let output_path = decrypted_dir.join(relative_path)
                     .with_extension(file_type.to_string());
-
-                println!("DEBUG: Tento di scrivere in: {:?}", output_path);
 
                 let parent_dir = output_path.parent().unwrap();
 
