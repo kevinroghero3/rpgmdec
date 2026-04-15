@@ -25,6 +25,9 @@ jobs:
         toolchain: stable
         target: x86_64-pc-windows-msvc
 
+    - name: Install Dependencies (Windows)
+      run: choco install cmake ninja
+      
     - name: Build
       # Aggiungiamo flag specifici per ignorare i warning che bloccano la build
       run: cargo build --release --verbose
