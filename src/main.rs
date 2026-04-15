@@ -827,9 +827,9 @@ impl Application {
                 mut_self.state,
                 State::DecryptArchive | State::DecryptAsset
             ) {
-                mut_self.decrypt_cb(this, &output_dir.replacen("/", "\\", 1));
+                mut_self.decrypt_cb(this, &output_dir);
             } else {
-                mut_self.encrypt_cb(this, &output_dir.replacen("/", "\\", 1));
+                mut_self.encrypt_cb(this, &output_dir);
             }
         });
 
@@ -890,7 +890,10 @@ impl Application {
     }
 
     fn decrypt_archive(&self, decrypted_dir: &Path) {
-        let decrypted_dir = Arc::new(decrypted_dir);
+        let decrypted_dir = Path::new(&self.output_dir)
+            .join(decrypted_dir_name)
+            .canonicalize()
+            .unwrap_or_else(|_| Path::new(&self.output_dir).join(decrypted_dir_name));
         let decrypted_archive_entries =
             Arc::new(&self.decrypted_archive_entries);
 
@@ -932,7 +935,10 @@ impl Application {
 
     fn decrypt_assets(&self, decrypted_dir: &Path) {
         let file_list_map = Arc::new(&self.file_list_map);
-        let decrypted_dir = Arc::new(decrypted_dir);
+        let decrypted_dir = Path::new(&self.output_dir)
+            .join(decrypted_dir_name)
+            .canonicalize()
+            .unwrap_or_else(|_| Path::new(&self.output_dir).join(decrypted_dir_name));
 
         let result = self
             .file_list
