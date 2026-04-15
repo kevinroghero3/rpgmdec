@@ -890,10 +890,7 @@ impl Application {
     }
 
     fn decrypt_archive(&self, decrypted_dir: &Path) {
-        let decrypted_dir = Path::new(&self.output_dir)
-            .join(decrypted_dir_name)
-            .canonicalize()
-            .unwrap_or_else(|_| Path::new(&self.output_dir).join(decrypted_dir_name));
+        let decrypted_dir = Arc::new(decrypted_dir);
         let decrypted_archive_entries =
             Arc::new(&self.decrypted_archive_entries);
 
@@ -905,9 +902,8 @@ impl Application {
                 let index = item as usize - 1;
                 let entry = &decrypted_archive_entries[index];
 
-                let output_path = decrypted_dir.join(
-                    String::from_utf8_lossy(entry.path.as_ref()).into_owned(),
-                );
+                let output_path = decrypted_dir.join(relative_path)
+                    .with_extension(file_type.to_string());
 
                 let parent_dir = output_path.parent().unwrap();
 
@@ -935,10 +931,7 @@ impl Application {
 
     fn decrypt_assets(&self, decrypted_dir: &Path) {
         let file_list_map = Arc::new(&self.file_list_map);
-        let decrypted_dir = Path::new(&self.output_dir)
-            .join(decrypted_dir_name)
-            .canonicalize()
-            .unwrap_or_else(|_| Path::new(&self.output_dir).join(decrypted_dir_name));
+        let decrypted_dir = Arc::new(decrypted_dir);
 
         let result = self
             .file_list
