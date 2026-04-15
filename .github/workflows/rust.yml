@@ -9,10 +9,10 @@ on:
 env:
   CARGO_TERM_COLOR: always
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  CFLTK_MSVC_CRT_STATIC: OFF
 
 jobs:
   build-windows:
-    # Cambiamo il sistema operativo del runner
     runs-on: windows-latest
 
     steps:
@@ -26,12 +26,14 @@ jobs:
         target: x86_64-pc-windows-msvc
 
     - name: Build
-      # Usiamo --release per avere un .exe ottimizzato e pronto all'uso
+      # Aggiungiamo flag specifici per ignorare i warning che bloccano la build
       run: cargo build --release --verbose
+      env:
+        CFLAGS: "-nologo -MD"
+        CXXFLAGS: "-nologo -MD"
 
     - name: Upload Windows Binary
       uses: actions/upload-artifact@v4
       with:
         name: programma-windows
-        # Nota l'estensione .exe e la cartella 'release'
         path: target/release/rpgmdec.exe
