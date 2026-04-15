@@ -821,7 +821,7 @@ impl Application {
                 date.hour(),
                 date.minute(),
                 date.second()
-            )).replacen("/", "\\", 1);
+            )).replace(format!("/", "\\"));
 
             if matches!(
                 mut_self.state,
