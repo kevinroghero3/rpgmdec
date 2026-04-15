@@ -2,41 +2,28 @@ name: Rust
 
 on:
   push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
-
-env:
-  CARGO_TERM_COLOR: always
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  CFLTK_MSVC_CRT_STATIC: OFF
+    tags:
+      - 'v*'
 
 jobs:
-  build-windows:
+  release:
+    name: Rilascia per Windows
     runs-on: windows-latest
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout del codice
+        uses: actions/checkout@v4
 
-    - name: Install Rust Toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        toolchain: stable
-        target: x86_64-pc-windows-msvc
+      - name: Imposta Rust
+        run: rustup update
 
-    - name: Install Dependencies (Windows)
-      run: choco install cmake ninja
-      
-    - name: Build
-      # Aggiungiamo flag specifici per ignorare i warning che bloccano la build
-      run: cargo build --release --verbose
-      env:
-        CFLAGS: "-nologo -MD"
-        CXXFLAGS: "-nologo -MD"
+      - name: Compila
+        run: cargo build --release
 
-    - name: Upload Windows Binary
-      uses: actions/upload-artifact@v4
-      with:
-        name: programma-windows
-        path: target/release/rpgmdec.exe
+      - name: Carica nella Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/release/*.exe
+          tag: ${{ github.ref }}
+          overwrite: true
+          file_glob: true
