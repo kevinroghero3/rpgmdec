@@ -966,23 +966,30 @@ impl Application {
                 let decrypted_data = &encrypted_data[HEADER_LENGTH..];
 
                 let path = Path::new(path);
-                let path_components = path.components();
+                let file_name = path.file_name().unwrap_or_else(|| OsStr::new("unknown"));
+
+                // Ricostruzione del percorso relativo (mantenendo la struttura se c'è "www")
                 let mut relative_path = PathBuf::default();
                 let mut collecting_relative_path = false;
-
-                for component in path_components {
+                for component in path.components() {
                     if component.as_os_str() == "www" {
                         collecting_relative_path = true;
                         relative_path = PathBuf::default();
                     }
-
                     if collecting_relative_path {
                         relative_path.push(component.as_os_str());
                     }
                 }
 
-                let output_path = decrypted_dir.join(relative_path)
-                    .with_extension(file_type.to_string());
+                // Se non abbiamo trovato "www", usiamo solo il nome del file
+                if relative_path.as_os_str().is_empty() {
+                    relative_path.push(file_name);
+                }
+
+                // COSTRUZIONE DEL PERCORSO FINALE
+                // Invece di with_extension, usiamo set_extension o gestiamo la stringa
+                let mut output_path = decrypted_dir.join(relative_path);
+                output_path.set_extension(file_type.to_string());
 
                 let parent_dir = output_path.parent().unwrap();
 
